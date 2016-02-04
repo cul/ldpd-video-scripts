@@ -1,8 +1,7 @@
 #!/usr/bin/env ruby
 ################################################################################
 # batchmakerpro.rb
-# video analyzer, prober, and batch-list maker
-# wrapper script for ffprobe
+# video analyzer, prober, and csv batch-list maker
 ################################################################################
 
 require 'rubygems'
