@@ -2,6 +2,7 @@
 ################################################################################
 # batchmakerpro.rb
 # video analyzer, prober, and csv batch-list maker
+# usage: batchmakerpro.rb [SOURCE_DIR] [CSV_OUTFILE]
 ################################################################################
 
 require 'rubygems'
@@ -10,7 +11,8 @@ Bundler.require
 require 'csv'
 
 source_dir = ARGV[0] || "."
-dest_dir = ARGV[1] || "."
+outfile_path = ARGV[1] || "./batchfile.csv"
+exts = "mp4,vob,wmv,avi,mpg,mpeg,asf,mov,3gp,m4v,flv"
 
 puts <<BM
  _______________
@@ -19,9 +21,20 @@ puts <<BM
 BM
 
 puts "Source dir: "+source_dir
-puts "CSV destination dir: "+dest_dir
+puts "CSV destination path: "+outfile_path
+unless outfile_path.end_with?(".csv")
+	puts "ERROR: CSV outfile must end with .csv" 
+	exit
+end
 
-vids = Dir.glob("#{source_dir}/**/*.{mp4,vob,wmv,avi,mpg,mpeg,asf,mov,3gp,m4v,flv}", File::FNM_CASEFOLD)
+vids = Dir.glob("#{source_dir}/**/*.{#{exts}}", File::FNM_CASEFOLD)
+vids_downcase_paths = vids.map{|vid_path| vid_path.downcase}
+# raise error if duplicate paths exist
+if vids_downcase_paths.length != vids_downcase_paths.uniq.length
+	puts "ERROR: Duplicate paths found." 
+	exit
+end
+
 if vids.empty? 
 	puts "No vids found. Exiting." 
 	exit
@@ -29,11 +42,11 @@ else
 	puts "Found " + vids.length.to_s + " vids. Processing..."
 end
 
-CSV.open(dest_dir+"/batchfile.csv", "wb") do |csv|
+CSV.open(outfile_path, "wb") do |csv|
   csv << ["FILENAME", "DIRNAME", "DURATION (SECS)", "FPS", "RESOLUTION", "VIDEO CODEC", "AUDIO SAMPLE RATE (Hz)", "AUDIO CODEC", "BITRATE (KB/S)", "SIZE (BYTES)", "VALID"]
   vids.each do | vid | 
     movie = FFMPEG::Movie.new(vid)
-    csv << [File.basename(vid), File.dirname(vid), movie.duration, movie.frame_rate.to_f, movie.resolution, movie.video_codec, movie.audio_sample_rate, movie.audio_codec, movie.bitrate, movie.size, movie.valid?]
+    csv << [File.basename(vid), File.dirname(vid), movie.duration, movie.frame_rate.to_f.round(2), movie.resolution, movie.video_codec, movie.audio_sample_rate, movie.audio_codec, movie.bitrate, movie.size, movie.valid?]
   end
 end
 
