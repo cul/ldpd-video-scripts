@@ -42,11 +42,16 @@ else
 	puts "Found " + vids.length.to_s + " vids. Processing..."
 end
 
+progress_counter = 1
+puts ""
+
 CSV.open(outfile_path, "wb") do |csv|
   csv << ["FILENAME", "DIRNAME", "DURATION (SECS)", "FPS", "RESOLUTION", "VIDEO CODEC", "AUDIO SAMPLE RATE (Hz)", "AUDIO CODEC", "BITRATE (KB/S)", "SIZE (BYTES)", "VALID"]
   vids.each do | vid | 
     movie = FFMPEG::Movie.new(vid)
     csv << [File.basename(vid), File.dirname(vid), movie.duration, movie.frame_rate.to_f.round(2), movie.resolution, movie.video_codec, movie.audio_sample_rate, movie.audio_codec, movie.bitrate, movie.size, movie.valid?]
+	print "\rProcessed #{progress_counter} of #{vids.length}"
+	progress_counter += 1
   end
 end
 
