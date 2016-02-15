@@ -12,7 +12,7 @@ require 'csv'
 
 source_dir = ARGV[0] || "."
 outfile_path = ARGV[1] || "./batchfile.csv"
-exts = "mp4,vob,wmv,avi,mpg,mpeg,asf,mov,3gp,m4v,flv"
+exts = "mp4,vob,wmv,avi,mpg,mpeg,asf,mov,3gp,m4v,flv,dv"
 
 puts <<BM
  _______________
