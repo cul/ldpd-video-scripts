@@ -55,4 +55,5 @@ CSV.open(outfile_path, "wb") do |csv|
   end
 end
 
+puts ""
 puts "Done."
