@@ -8,6 +8,8 @@
 # TODO:
 # - show how long each job takes
 # - implement joining multipart VOBs
+# --- ex: ffmpeg -i concat:VTS_01_0.VOB\|VTS_01_1.VOB\|VTS_01_2.VOB outfile.mp4
+# ------- http://stackoverflow.com/a/8349419
 ###
 
 require 'rubygems'
@@ -24,11 +26,11 @@ full_path_outfile = ARGV[1] || "./transcodes"
 #  note: it seems ffmpeg defaults for ntsc-dvvideo are pretty much producing the above specs. 
 preservation_format = "-target ntsc-dvvideo"
 
-# access we want?:
+# access format we want?:
 #  Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuv420p, 640x480 [SAR 4:3 DAR 16:9], 1483 kb/s, 29.97 fps, 29.97 tbr, 30k tbn, 59.94 tbc (default)
 #  Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 192 kb/s (default)
 #  note: it seems ffmpeg defaults for ntsc-mp4 are pretty much producing the above specs. 
-#access_format = "-target ntsc-mp4"
+access_format = "-target ntsc-mpeg4"
 
 
 puts <<BM
