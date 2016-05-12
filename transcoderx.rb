@@ -79,9 +79,7 @@ CSV.open(batchfile, "rb", headers: true) do |csv|
 
     puts "Creating Access Copy"
     full_path_outfile = File.join(access_dir, "#{base_file_name}.mp4")
-    # below, specifying access_format fails for some reason
     movie.transcode(full_path_outfile, access_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
-    #movie.transcode(full_path_outfile) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
     puts "Done with Access Copy."
   end
 end
