@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+$:.unshift File.expand_path("../lib", __FILE__)
 ################################################################################
 # transcoderx.rb
 # batch transcode video from batchmakerpro batch file
@@ -49,9 +50,9 @@ end
 help() unless ARGV[2]
 
 help("CSV_FILE \"#{batchfile}\" does not exist") unless File.exist?(batchfile)
-source_root = ARGV[1] || File.join(File.root, "Volumes","vid1")
+source_root = ARGV[1] || File.join('/', "Volumes","vid1")
 help("SOURCE_ROOT value of \"#{source_root}\" does not exist") unless File.exist?(source_root)
-destination_root = ARGV[2] || File.join(File.root, "Volumes","vid2")
+destination_root = ARGV[2] || File.join('/', "Volumes","vid2")
 help("DESTINATION_ROOT value of \"#{destination_root}\" does not exist") unless File.exist?(destination_root)
 
 preservation_root = File.join(destination_root, 'preservation')
