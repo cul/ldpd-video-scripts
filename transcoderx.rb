@@ -30,8 +30,9 @@ preservation_format = "-target ntsc-dvvideo"
 #  Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuv420p, 640x480 [SAR 4:3 DAR 16:9], 1483 kb/s, 29.97 fps, 29.97 tbr, 30k tbn, 59.94 tbc (default)
 #  Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 192 kb/s (default)
 #  note: it seems ffmpeg defaults for ntsc-mp4 are pretty much producing the above specs. 
-access_format = "-vcodec libx264 -s 640x480 -b:v 3256000 -acodec libfaac -ar 48000 " # WIP this is not quite right yet and will be changed based on new discusson
+access_format_template = "-vcodec libx264 -s VIDEO_WIDTHxVIDEO_HEIGHT -b:v BITRATE_VALUE -acodec libfaac -ar 48000 " # WIP this is not quite right yet and will be changed based on new discusson
 
+magic_quality_number = 0.23 # Make this higher for higher quality, lower for lower quality
 
 puts <<BM
  _____________
@@ -71,14 +72,21 @@ CSV.open(batchfile, "rb", headers: true) do |csv|
     preservation_dir = File.join(preservation_root, dir_path, file_name)
     FileUtils.makedirs(preservation_dir)
     movie = FFMPEG::Movie.new(video_source_path)
+    
+    # Calculate desired bitrate based on video size and fps
+    video_width = movie.width
+    video_height = movie.height
+    bitrate = (magic_quality_number * video_width * video_height * movie.frame_rate.to_f).ceil
 
     base_file_name = File.basename(video_source_path, File.extname(video_source_path))
     full_path_outfile = File.join(preservation_dir, "#{base_file_name}.dv")
-    puts "Creating Preservation Master"
+    puts "Creating Preservation Master with ffmpeg args: " + preservation_format
     movie.transcode(full_path_outfile, preservation_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
     puts "Done with Preservation Master."
 
-    puts "Creating Access Copy"
+    # Swap values into access_format_template and create access copy
+    access_format = access_format_template.gsub('VIDEO_WIDTH', video_width.to_s).gsub('VIDEO_HEIGHT', video_height.to_s).gsub('BITRATE_VALUE', bitrate.to_s)
+    puts "Creating Access Copy with ffmpeg args: #{access_format}"
     full_path_outfile = File.join(access_dir, "#{base_file_name}.mp4")
     movie.transcode(full_path_outfile, access_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
     puts "Done with Access Copy."
