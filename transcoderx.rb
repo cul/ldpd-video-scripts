@@ -30,7 +30,7 @@ preservation_format = "-target ntsc-dvvideo"
 #  Stream #0:0(und): Video: h264 (High) (avc1 / 0x31637661), yuv420p, 640x480 [SAR 4:3 DAR 16:9], 1483 kb/s, 29.97 fps, 29.97 tbr, 30k tbn, 59.94 tbc (default)
 #  Stream #0:1(und): Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 192 kb/s (default)
 #  note: it seems ffmpeg defaults for ntsc-mp4 are pretty much producing the above specs. 
-access_format_template = "-vcodec libx264 -s VIDEO_WIDTHxVIDEO_HEIGHT -b:v BITRATE_VALUE -acodec libfaac -ar 48000 " # WIP this is not quite right yet and will be changed based on new discusson
+access_format_template = "-vcodec libx264 -s VIDEO_WIDTHxVIDEO_HEIGHT -b:v BITRATE_VALUE -pix_fmt yuv420p -acodec libfaac -ar 48000" # WIP this is not quite right yet and will be changed based on new discusson
 
 magic_quality_number = 0.23 # Make this higher for higher quality, lower for lower quality
 
