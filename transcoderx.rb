@@ -48,7 +48,7 @@ end
 
 
 
-help() unless ARGV[2]
+help() unless ARGV[0]
 
 help("CSV_FILE \"#{batchfile}\" does not exist") unless File.exist?(batchfile)
 source_root = ARGV[1] || File.join('/', "Volumes","vid1")
@@ -60,49 +60,79 @@ preservation_root = File.join(destination_root, 'preservation')
 access_root = File.join(destination_root, 'access')
 
 CSV.open(batchfile, "rb", headers: true) do |csv|
+  video_counter = 0
+  num_videos = csv.readlines.size - 1 # Subtract one line for headers
+  csv.rewind # Go back to the beginning of the file
+  
   CSV.open('transcoded.csv', 'wb') do |report|
-    report << ['FILENAME', 'DIRECTORY', 'PROBLEM FOUND?', 'PROBLEM DESCRIPTION', 'KEYWORDS']
+    report << ['FILENAME', 'DIRNAME', "DURATION (SECS)", "FPS", "RESOLUTION", "VIDEO CODEC", "AUDIO SAMPLE RATE (Hz)", "AUDIO CODEC", "BITRATE (KB/S)", "SIZE (BYTES)", "VALID", 'PROBLEM FOUND?', 'PROBLEM DESCRIPTION', 'KEYWORDS']
     csv.each do |row|
       next if row.header_row?
+      
+      report.flush
+      
+      video_counter += 1
+      puts "Transcoding video #{video_counter} of #{num_videos}..."
+      
       file_name = row[0]
       dir_path = row[1]
       dir_path = dir_path[1..-1] if dir_path =~ /^\//
       video_source_path =  File.join(source_root, dir_path, file_name)
 
       # build the output path
-      access_dir = File.join(access_root, dir_path, file_name)
+      access_dir = File.join(access_root, dir_path)
       FileUtils.makedirs(access_dir)
 
-      base_file_name = File.basename(video_source_path, File.extname(video_source_path))
-      access_file_name = "#{base_file_name}.mp4"
+      access_file_name = File.basename(video_source_path) + ".mp4"
+      full_path_outfile = File.join(access_dir, access_file_name)
+      
+      # Make sure that original video file exists
       unless File.exist?(video_source_path)
-        report << [access_file_name, access_dir, true, "source missing"]
+        report << [access_file_name, access_dir, '', '', '', '', '', '', '', '','', true, "Source video not found"]
         next
       end
+      
       begin
         movie = FFMPEG::Movie.new(video_source_path)
+        original_movie_duration = movie.duration
       rescue StandardError
         report << [access_file_name, access_dir, true, "FFMPEG::Movie cannot open sourcefile"]
         next
-      end        
-
-      # Calculate desired bitrate based on video size and fps
-      video_width = movie.width
-      video_height = movie.height
-      bitrate = (magic_quality_number * video_width * video_height * movie.frame_rate.to_f).ceil
-
-      # Swap values into access_format_template and create access copy
-      access_format = access_format_template.gsub('VIDEO_WIDTH', video_width.to_s).gsub('VIDEO_HEIGHT', video_height.to_s).gsub('BITRATE_VALUE', bitrate.to_s)
-      puts "Creating Access Copy with ffmpeg args: #{access_format}"
-      full_path_outfile = File.join(access_dir, "#{base_file_name}.mp4")
-      begin
-        movie.transcode(full_path_outfile, access_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
-      rescue StandardError
-        report << [access_file_name, access_dir, true, "FFMPEG::Movie cannot transcode sourcefile"]
-        next
+      end  
+      
+      # If transcoded copy already exists, don't re-generate it. Otherwise do generate it.
+      if File.exists?(full_path_outfile)
+        puts "--> Skipped access copy generation because file already exists."
+      else
+        # Calculate desired bitrate based on video size and fps
+        video_width = movie.width
+        video_height = movie.height
+        bitrate = (magic_quality_number * video_width * video_height * movie.frame_rate.to_f).ceil
+  
+        # Swap values into access_format_template and create access copy
+        access_format = access_format_template.gsub('VIDEO_WIDTH', video_width.to_s).gsub('VIDEO_HEIGHT', video_height.to_s).gsub('BITRATE_VALUE', bitrate.to_s)
+        puts "Creating Access Copy with ffmpeg args: #{access_format}"
+        
+        begin
+          movie.transcode(full_path_outfile, access_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
+        rescue StandardError
+          report << [access_file_name, access_dir, '', '', '', '', '', '', '', '','', true, "FFMPEG::Movie cannot transcode sourcefile"]
+          next
+        end
       end
-      report << [access_file_name, access_dir]
-      puts "Done with Access Copy."
+      
+      # Extract technical data from generated access copy
+      access_copy_movie = FFMPEG::Movie.new(full_path_outfile)
+      
+      # Verify that access copy movie duration equals original movie duration
+      
+      if original_movie_duration.to_i != access_copy_movie.duration.to_i # Round to nearest integer to ignore floating point errors
+        report << [access_file_name, access_dir, '', '', '', '', '', '', '', '','', true, "Access copy duration is not the same as the original!"]
+      else
+        report << [access_file_name, access_dir, access_copy_movie.duration, access_copy_movie.frame_rate.to_f.round(2), access_copy_movie.resolution, access_copy_movie.video_codec, access_copy_movie.audio_sample_rate, access_copy_movie.audio_codec, access_copy_movie.bitrate, access_copy_movie.size, access_copy_movie.valid?]
+      end
+      
+      puts "Done generating access copy."
     end
   end
 end
