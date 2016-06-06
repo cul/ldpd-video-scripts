@@ -65,11 +65,17 @@ CSV.open(batchfile, "rb", headers: true) do |csv|
     video_source_path =  File.join(remote_dir_path, file_name)
     video_synch_path = File.join(synch_root, synch_dir_path, file_name)
     cmd = ["rsync", rsync_flags, "#{host}:#{video_source_path}", video_synch_path]
-    if 1 == 0
-        IO.popen(cmd, 'r')
-        # what to do if $? is non-zero? stop or log/continue?
-    else
-        puts cmd.join(' ')
+
+    begin
+      cmd_out = ''
+      IO.popen(cmd, 'r') { |cmd_io| cmd_out = cmd_io.read }
+      unless $? == 0
+        puts cmd_out
+        raise "unexpected exit status #{$?}"
+      end
+    rescue StandardError => e
+      puts "Failure on: \"#{cmd}\""
+      puts "\t#{e.message}"
     end
   end
 end

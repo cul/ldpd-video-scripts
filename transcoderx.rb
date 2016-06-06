@@ -60,35 +60,49 @@ preservation_root = File.join(destination_root, 'preservation')
 access_root = File.join(destination_root, 'access')
 
 CSV.open(batchfile, "rb", headers: true) do |csv|
-  csv.each do |row|
-    next if row.header_row?
-    file_name = row[0]
-    dir_path = row[1]
-    dir_path = dir_path[1..-1] if dir_path =~ /^\//
-    video_source_path =  File.join(source_root, dir_path, file_name)
-    access_dir = File.join(access_root, dir_path, file_name)
-    FileUtils.makedirs(access_dir)
-    # then we use this as part of the output path
-    preservation_dir = File.join(preservation_root, dir_path, file_name)
-    FileUtils.makedirs(preservation_dir)
-    movie = FFMPEG::Movie.new(video_source_path)
-    
-    # Calculate desired bitrate based on video size and fps
-    video_width = movie.width
-    video_height = movie.height
-    bitrate = (magic_quality_number * video_width * video_height * movie.frame_rate.to_f).ceil
+  CSV.open('transcoded.csv', 'wb') do |report|
+    report << ['FILENAME', 'DIRECTORY', 'PROBLEM FOUND?', 'PROBLEM DESCRIPTION', 'KEYWORDS']
+    csv.each do |row|
+      next if row.header_row?
+      file_name = row[0]
+      dir_path = row[1]
+      dir_path = dir_path[1..-1] if dir_path =~ /^\//
+      video_source_path =  File.join(source_root, dir_path, file_name)
 
-    base_file_name = File.basename(video_source_path, File.extname(video_source_path))
-    full_path_outfile = File.join(preservation_dir, "#{base_file_name}.dv")
-    puts "Creating Preservation Master with ffmpeg args: " + preservation_format
-    movie.transcode(full_path_outfile, preservation_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
-    puts "Done with Preservation Master."
+      # build the output path
+      access_dir = File.join(access_root, dir_path, file_name)
+      FileUtils.makedirs(access_dir)
 
-    # Swap values into access_format_template and create access copy
-    access_format = access_format_template.gsub('VIDEO_WIDTH', video_width.to_s).gsub('VIDEO_HEIGHT', video_height.to_s).gsub('BITRATE_VALUE', bitrate.to_s)
-    puts "Creating Access Copy with ffmpeg args: #{access_format}"
-    full_path_outfile = File.join(access_dir, "#{base_file_name}.mp4")
-    movie.transcode(full_path_outfile, access_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
-    puts "Done with Access Copy."
+      base_file_name = File.basename(video_source_path, File.extname(video_source_path))
+      access_file_name = "#{base_file_name}.mp4"
+      unless File.exist?(video_source_path)
+        report << [access_file_name, access_dir, true, "source missing"]
+        next
+      end
+      begin
+        movie = FFMPEG::Movie.new(video_source_path)
+      rescue StandardError
+        report << [access_file_name, access_dir, true, "FFMPEG::Movie cannot open sourcefile"]
+        next
+      end        
+
+      # Calculate desired bitrate based on video size and fps
+      video_width = movie.width
+      video_height = movie.height
+      bitrate = (magic_quality_number * video_width * video_height * movie.frame_rate.to_f).ceil
+
+      # Swap values into access_format_template and create access copy
+      access_format = access_format_template.gsub('VIDEO_WIDTH', video_width.to_s).gsub('VIDEO_HEIGHT', video_height.to_s).gsub('BITRATE_VALUE', bitrate.to_s)
+      puts "Creating Access Copy with ffmpeg args: #{access_format}"
+      full_path_outfile = File.join(access_dir, "#{base_file_name}.mp4")
+      begin
+        movie.transcode(full_path_outfile, access_format) { |progress| print "\rPercent complete: " + (progress * 100).to_i.to_s + "%"  }
+      rescue StandardError
+        report << [access_file_name, access_dir, true, "FFMPEG::Movie cannot transcode sourcefile"]
+        next
+      end
+      report << [access_file_name, access_dir]
+      puts "Done with Access Copy."
+    end
   end
 end
