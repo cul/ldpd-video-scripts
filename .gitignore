@@ -7,34 +7,10 @@
 # Ignore bundler config.
 /.bundle
 
-# Ignore the default SQLite database.
-/db/*.sqlite3
-/db/*.sqlite3-journal
-
-# Ignore all logfiles and tempfiles.
-/log/*.log
-/tmp
-/log/resque*
-
-# Ignore local Guardfile customation file
-config/local_guardfile_customizations.yml
-
 # Ignore editor files
 *~
 \#*\#
 *\.swp
-
-# Ignore config files with sensitive data
-cas.yml
-database.yml
-fedora.yml
-solr.yml
-wind.yml
-initializer_secrets.yml
-dcv.yml
-default_user_accounts.yml
-resque.yml
-roles.yml
 
 # Ignore OS-specific
 .DS_Store
@@ -45,3 +21,6 @@ reference-files/*
 
 # Ignore CSV files
 *.csv
+
+# Ignore log files
+*.log

@@ -10,3 +10,6 @@ PLATFORMS
 
 DEPENDENCIES
   streamio-ffmpeg
+
+BUNDLED WITH
+   1.12.5

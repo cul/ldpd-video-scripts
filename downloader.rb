@@ -56,26 +56,46 @@ help("SYNCH_ROOT value of \"#{synch_root}\" does not exist") unless File.exist?(
 
 host = ARGV[host_ix]
 
-CSV.open(batchfile, "rb", headers: true) do |csv|
-  csv.each do |row|
-    next if row.header_row?
-    file_name = row[0]
-    remote_dir_path = row[1]
-    synch_dir_path = remote_dir_path =~ /^\// ? remote_dir_path[1..-1] : remote_dir_path 
-    video_source_path =  File.join(remote_dir_path, file_name)
-    video_synch_path = File.join(synch_root, synch_dir_path, file_name)
-    cmd = ["rsync", rsync_flags, "#{host}:#{video_source_path}", video_synch_path]
-
-    begin
-      cmd_out = ''
-      IO.popen(cmd, 'r') { |cmd_io| cmd_out = cmd_io.read }
-      unless $? == 0
-        puts cmd_out
-        raise "unexpected exit status #{$?}"
+File.open('downloader.log', 'w') do |logfile|
+  
+  logfile.write('downloader.rb has started --> ' + Time.now.to_s + "\n")
+  logfile.flush
+  
+  CSV.open(batchfile, "rb", headers: true) do |csv|
+    video_counter = 0
+    num_videos = csv.readlines.size - 1 # Subtract one line for headers
+    csv.rewind # Go back to the beginning of the file
+    csv.each do |row|
+      next if row.header_row?
+      
+      video_counter += 1
+      puts "Downloading video #{video_counter} of #{num_videos}..."
+      
+      file_name = row[0]
+      remote_dir_path = row[1]
+      synch_dir_path = remote_dir_path =~ /^\// ? remote_dir_path[1..-1] : remote_dir_path 
+      video_source_path =  File.join(remote_dir_path, file_name).shellescape
+      video_synch_path = File.join(synch_root, synch_dir_path, file_name)
+      video_synch_path_dir = File.dirname(video_synch_path)
+      
+      FileUtils.mkdir_p(video_synch_path_dir)
+      cmd = ["rsync", rsync_flags, "#{host}:#{video_source_path}", video_synch_path]
+  
+      begin
+        cmd_out = ''
+        IO.popen(cmd, 'r') { |cmd_io| cmd_out = cmd_io.read }
+        unless $? == 0
+          puts cmd_out
+          raise "unexpected exit status #{$?}"
+        end
+      rescue StandardError => e
+        logfile.write("Failure on: \"#{cmd}\"" + "\n")
+        logfile.write("\t#{e.message}" + "\n")
+        logfile.flush
       end
-    rescue StandardError => e
-      puts "Failure on: \"#{cmd}\""
-      puts "\t#{e.message}"
+  
     end
   end
+  
+  logfile.write('downloader.rb complete! --> ' + Time.now.to_s)
 end
