@@ -126,7 +126,7 @@ CSV.open(batchfile, "rb", headers: true) do |csv|
       
       # Verify that access copy movie duration equals original movie duration
       
-      if original_movie_duration.to_i != access_copy_movie.duration.to_i # Round to nearest integer to ignore floating point errors
+      if (original_movie_duration - access_copy_movie.duration).abs > 1 # Round to nearest integer to ignore floating point errors
         report << [access_file_name, access_dir, '', '', '', '', '', '', '', '','', true, "Access copy duration is not the same as the original!"]
       else
         report << [access_file_name, access_dir, access_copy_movie.duration, access_copy_movie.frame_rate.to_f.round(2), access_copy_movie.resolution, access_copy_movie.video_codec, access_copy_movie.audio_sample_rate, access_copy_movie.audio_codec, access_copy_movie.bitrate, access_copy_movie.size, access_copy_movie.valid?]
